@@ -1,5 +1,5 @@
 /* ============================================
-   TutorPro — JavaScript
+   TutorPro — JavaScript (v2)
    ============================================ */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -23,7 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.style.overflow = mobileMenu.classList.contains('active') ? 'hidden' : '';
     });
 
-    // Close mobile menu when a link is clicked
     mobileMenu.querySelectorAll('a').forEach(link => {
       link.addEventListener('click', () => {
         menuToggle.classList.remove('active');
@@ -33,18 +32,63 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- Smooth Scrolling for Anchor Links ---
+  // --- Smooth Scrolling ---
   document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', (e) => {
       const targetId = anchor.getAttribute('href');
       if (targetId === '#') return;
-
       const targetEl = document.querySelector(targetId);
       if (targetEl) {
         e.preventDefault();
         targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     });
+  });
+
+  // --- Interactive Service Card Selection ---
+  const serviceCards = document.querySelectorAll('.service-card[data-service]');
+  const serviceSelect = document.getElementById('service');
+
+  serviceCards.forEach(card => {
+    card.addEventListener('click', (e) => {
+      // Don't intercept if user clicked the CTA button link
+      if (e.target.closest('.service-card__btn')) return;
+
+      // Remove active from all cards, add to clicked
+      serviceCards.forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+
+      // Update the form dropdown
+      const serviceValue = card.dataset.service;
+      if (serviceSelect) {
+        serviceSelect.value = serviceValue;
+        // Trigger change event for any listeners
+        serviceSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+
+    // Also handle the CTA button inside cards
+    const btn = card.querySelector('.service-card__btn');
+    if (btn) {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        // Select this card
+        serviceCards.forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+
+        // Update dropdown
+        const serviceValue = card.dataset.service;
+        if (serviceSelect) {
+          serviceSelect.value = serviceValue;
+        }
+
+        // Scroll to booking
+        const booking = document.getElementById('booking');
+        if (booking) {
+          booking.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    }
   });
 
   // --- Booking Form Handling ---
@@ -57,21 +101,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const submitBtn = bookingForm.querySelector('.form-submit');
       const originalText = submitBtn.textContent;
 
-      // Disable button and show loading state
       submitBtn.disabled = true;
       submitBtn.textContent = 'Отправка...';
       submitBtn.style.opacity = '0.8';
 
-      // Simulate network request
       setTimeout(() => {
-        submitBtn.textContent = '✓ Заявка успешно отправлена!';
+        submitBtn.textContent = 'Заявка успешно отправлена!';
         submitBtn.classList.add('form-submit--success');
         submitBtn.style.opacity = '1';
 
-        // Clear form fields
         bookingForm.reset();
 
-        // Reset button after 3 seconds
+        // Also deselect cards
+        serviceCards.forEach(c => c.classList.remove('active'));
+
         setTimeout(() => {
           submitBtn.textContent = originalText;
           submitBtn.classList.remove('form-submit--success');
@@ -82,14 +125,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- Scroll Reveal Animation ---
+  // --- Scroll Reveal ---
   const revealElements = document.querySelectorAll('.reveal');
 
   if (revealElements.length > 0) {
     const revealObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
-          // Stagger delay based on data attribute
           const delay = entry.target.dataset.delay || 0;
           setTimeout(() => {
             entry.target.classList.add('visible');
@@ -105,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
     revealElements.forEach(el => revealObserver.observe(el));
   }
 
-  // --- Active Nav Link Highlighting ---
+  // --- Active Nav Highlighting ---
   const sections = document.querySelectorAll('section[id]');
   const navLinks = document.querySelectorAll('.nav a[href^="#"]');
 
@@ -124,7 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }, {
       threshold: 0.3,
-      rootMargin: `-${parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-height')) || 72}px 0px 0px 0px`
+      rootMargin: `-${parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-height')) || 64}px 0px 0px 0px`
     });
 
     sections.forEach(section => navObserver.observe(section));
