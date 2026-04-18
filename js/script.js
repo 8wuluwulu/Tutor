@@ -384,7 +384,8 @@ document.addEventListener('DOMContentLoaded', () => {
           name: nameInput.value.trim(),
           phone: contactInput.value.trim(),
           service: serviceInput.value,
-          time: timeInput.value
+          time: timeInput.value,
+          honeypot: document.getElementById('honeypot').value
         };
 
         console.log('Отправляем данные на сервер:', bookingData);
