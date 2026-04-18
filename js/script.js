@@ -1,10 +1,14 @@
 /* ============================================
-   TutorPro — JavaScript (v2)
+   TutorPro — JavaScript (v5)
+   "Smart & Kind" Validation · Digit Blocker
+   Phone Masking · Polished Mobile Menu
    ============================================ */
 
 document.addEventListener('DOMContentLoaded', () => {
 
-  // --- Header Scroll Effect ---
+  // ══════════════════════════════════
+  //  HEADER SCROLL EFFECT
+  // ══════════════════════════════════
   const header = document.querySelector('.header');
   const onScroll = () => {
     header.classList.toggle('header--scrolled', window.scrollY > 20);
@@ -12,27 +16,48 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 
-  // --- Mobile Menu ---
+
+  // ══════════════════════════════════
+  //  MOBILE MENU — Stable toggle
+  // ══════════════════════════════════
   const menuToggle = document.querySelector('.menu-toggle');
   const mobileMenu = document.querySelector('.mobile-menu');
 
+  function closeMobileMenu() {
+    menuToggle.classList.remove('active');
+    mobileMenu.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
   if (menuToggle && mobileMenu) {
     menuToggle.addEventListener('click', () => {
-      menuToggle.classList.toggle('active');
-      mobileMenu.classList.toggle('active');
-      document.body.style.overflow = mobileMenu.classList.contains('active') ? 'hidden' : '';
+      const isOpen = mobileMenu.classList.contains('active');
+      if (isOpen) {
+        closeMobileMenu();
+      } else {
+        menuToggle.classList.add('active');
+        mobileMenu.classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
     });
 
+    // Close menu on any link click
     mobileMenu.querySelectorAll('a').forEach(link => {
-      link.addEventListener('click', () => {
-        menuToggle.classList.remove('active');
-        mobileMenu.classList.remove('active');
-        document.body.style.overflow = '';
-      });
+      link.addEventListener('click', closeMobileMenu);
+    });
+
+    // Close menu on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && mobileMenu.classList.contains('active')) {
+        closeMobileMenu();
+      }
     });
   }
 
-  // --- Smooth Scrolling ---
+
+  // ══════════════════════════════════
+  //  SMOOTH SCROLLING
+  // ══════════════════════════════════
   document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', (e) => {
       const targetId = anchor.getAttribute('href');
@@ -45,44 +70,43 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // --- Interactive Service Card Selection ---
+
+  // ══════════════════════════════════
+  //  INTERACTIVE SERVICE CARD SELECTION
+  // ══════════════════════════════════
   const serviceCards = document.querySelectorAll('.service-card[data-service]');
   const serviceSelect = document.getElementById('service');
 
   serviceCards.forEach(card => {
     card.addEventListener('click', (e) => {
-      // Don't intercept if user clicked the CTA button link
       if (e.target.closest('.service-card__btn')) return;
 
-      // Remove active from all cards, add to clicked
       serviceCards.forEach(c => c.classList.remove('active'));
       card.classList.add('active');
 
-      // Update the form dropdown
       const serviceValue = card.dataset.service;
       if (serviceSelect) {
         serviceSelect.value = serviceValue;
-        // Trigger change event for any listeners
+        clearFieldState(serviceSelect);
+        setFieldValid(serviceSelect);
         serviceSelect.dispatchEvent(new Event('change', { bubbles: true }));
       }
     });
 
-    // Also handle the CTA button inside cards
     const btn = card.querySelector('.service-card__btn');
     if (btn) {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
-        // Select this card
         serviceCards.forEach(c => c.classList.remove('active'));
         card.classList.add('active');
 
-        // Update dropdown
         const serviceValue = card.dataset.service;
         if (serviceSelect) {
           serviceSelect.value = serviceValue;
+          clearFieldState(serviceSelect);
+          setFieldValid(serviceSelect);
         }
 
-        // Scroll to booking
         const booking = document.getElementById('booking');
         if (booking) {
           booking.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -91,42 +115,255 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // --- Booking Form Handling ---
+
+  // ══════════════════════════════════
+  //  NAME FIELD — Digit Blocker
+  //  Instantly strips any numeric chars
+  // ══════════════════════════════════
+  function setupNameInput(input) {
+    if (!input) return;
+    input.addEventListener('input', () => {
+      const cursor = input.selectionStart;
+      const before = input.value;
+      const cleaned = before.replace(/[0-9]/g, '');
+      if (cleaned !== before) {
+        const diff = before.length - cleaned.length;
+        input.value = cleaned;
+        // Restore cursor position adjusted for removed chars
+        input.setSelectionRange(cursor - diff, cursor - diff);
+      }
+    });
+  }
+
+
+  // ══════════════════════════════════
+  //  PHONE MASK — +7 (XXX) XXX-XX-XX
+  //  Supports Telegram @handles
+  // ══════════════════════════════════
+  function setupContactInput(input) {
+    if (!input) return;
+
+    let isTelegramMode = false;
+
+    input.addEventListener('input', () => {
+      const raw = input.value;
+
+      // Detect Telegram mode: starts with @
+      if (raw.startsWith('@')) {
+        isTelegramMode = true;
+        return; // No masking for Telegram handles
+      }
+
+      // Phone masking mode
+      if (!isTelegramMode) {
+        let digits = raw.replace(/\D/g, '');
+
+        if (digits.length === 0) {
+          input.value = '';
+          return;
+        }
+
+        // Normalize: 8 → 7, or prepend 7
+        if (digits.startsWith('8')) digits = '7' + digits.slice(1);
+        if (!digits.startsWith('7')) digits = '7' + digits;
+
+        // Cap at 11 digits (Russian phone)
+        digits = digits.slice(0, 11);
+
+        let formatted = '+' + digits[0];
+        if (digits.length >= 2) formatted += ' (' + digits.substring(1, Math.min(4, digits.length));
+        if (digits.length >= 4) formatted += ')';
+        if (digits.length >= 5) formatted += ' ' + digits.substring(4, Math.min(7, digits.length));
+        if (digits.length >= 8) formatted += '-' + digits.substring(7, Math.min(9, digits.length));
+        if (digits.length >= 10) formatted += '-' + digits.substring(9, 11);
+
+        input.value = formatted;
+      }
+    });
+
+    // Reset telegram mode when field is cleared and re-focused
+    input.addEventListener('focus', () => {
+      if (input.value === '') isTelegramMode = false;
+    });
+
+    // Also reset on full clear
+    input.addEventListener('input', () => {
+      if (input.value === '') isTelegramMode = false;
+    });
+  }
+
+
+  // ══════════════════════════════════
+  //  VALIDATION — "Smart & Kind"
+  //  Real-time, as-you-type feedback
+  // ══════════════════════════════════
+
+  /** Clear all validation state from a field */
+  function clearFieldState(field) {
+    field.classList.remove('error', 'valid');
+    const errorMsg = field.closest('.form-group')?.querySelector('.error-message');
+    if (errorMsg) errorMsg.classList.remove('visible');
+  }
+
+  /** Mark a field as valid (green border) */
+  function setFieldValid(field) {
+    field.classList.remove('error');
+    field.classList.add('valid');
+    const errorMsg = field.closest('.form-group')?.querySelector('.error-message');
+    if (errorMsg) errorMsg.classList.remove('visible');
+  }
+
+  /** Mark a field as invalid with a friendly message */
+  function setFieldError(field, message) {
+    field.classList.remove('valid');
+    field.classList.add('error');
+    const errorMsg = field.closest('.form-group')?.querySelector('.error-message');
+    if (errorMsg) {
+      errorMsg.textContent = message;
+      errorMsg.classList.add('visible');
+    }
+  }
+
+  // Validation rules
+  const validators = {
+    name: (value) => {
+      const trimmed = value.trim();
+      if (trimmed.length === 0) return { valid: false, message: 'Пожалуйста, введите ваше имя' };
+      if (trimmed.length < 2) return { valid: false, message: 'Имя должно содержать минимум 2 символа' };
+      return { valid: true };
+    },
+    contact: (value) => {
+      const trimmed = value.trim();
+      if (trimmed.length === 0) return { valid: false, message: 'Укажите телефон или Telegram' };
+      // Telegram handle
+      if (trimmed.startsWith('@')) {
+        if (trimmed.length < 4) return { valid: false, message: 'Минимум 3 символа после @' };
+        return { valid: true };
+      }
+      // Phone — need 11 digits for Russian number
+      const digits = trimmed.replace(/\D/g, '');
+      if (digits.length < 11) return { valid: false, message: 'Введите полный номер телефона' };
+      return { valid: true };
+    },
+    service: (value) => {
+      if (!value || value.length === 0) return { valid: false, message: 'Выберите программу обучения' };
+      return { valid: true };
+    },
+    time: (value) => {
+      if (!value || value.length === 0) return { valid: false, message: 'Выберите удобное время' };
+      return { valid: true };
+    }
+  };
+
+  /** Attach live validation listeners to a field */
+  function attachLiveValidation(field, validatorKey) {
+    if (!field) return;
+    const validator = validators[validatorKey];
+    if (!validator) return;
+
+    const isSelect = field.tagName === 'SELECT';
+    const inputEvent = isSelect ? 'change' : 'input';
+
+    // On input/change — show green while valid, clear error while typing
+    field.addEventListener(inputEvent, () => {
+      const result = validator(field.value);
+      if (result.valid) {
+        setFieldValid(field);
+      } else {
+        // While typing, just clear error — don't nag yet
+        clearFieldState(field);
+      }
+    });
+
+    // On blur — full validation with friendly error
+    field.addEventListener('blur', () => {
+      const val = field.value.trim();
+      if (val.length === 0) {
+        clearFieldState(field); // Don't scold on empty blur
+        return;
+      }
+      const result = validator(field.value);
+      if (result.valid) {
+        setFieldValid(field);
+      } else {
+        setFieldError(field, result.message);
+      }
+    });
+  }
+
+
+  // ══════════════════════════════════
+  //  FORM SETUP & SUBMISSION
+  // ══════════════════════════════════
   const bookingForm = document.getElementById('booking-form');
 
   if (bookingForm) {
+    const nameInput = document.getElementById('name');
+    const contactInput = document.getElementById('contact');
+    const serviceInput = document.getElementById('service');
+    const timeInput = document.getElementById('time');
+
+    // Setup digit blocker on name field
+    setupNameInput(nameInput);
+
+    // Setup phone masking on contact field
+    setupContactInput(contactInput);
+
+    // Attach live validation to all form fields
+    attachLiveValidation(nameInput, 'name');
+    attachLiveValidation(contactInput, 'contact');
+    attachLiveValidation(serviceInput, 'service');
+    attachLiveValidation(timeInput, 'time');
+
     bookingForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
+      // ── Final validation pass ──
+      let isValid = true;
+      let firstInvalid = null;
+
+      const fieldChecks = [
+        { el: nameInput, key: 'name' },
+        { el: contactInput, key: 'contact' },
+        { el: serviceInput, key: 'service' },
+        { el: timeInput, key: 'time' }
+      ];
+
+      fieldChecks.forEach(({ el, key }) => {
+        if (!el) { isValid = false; return; }
+        const result = validators[key](el.value);
+        if (!result.valid) {
+          setFieldError(el, result.message);
+          isValid = false;
+          if (!firstInvalid) firstInvalid = el;
+        } else {
+          setFieldValid(el);
+        }
+      });
+
+      if (!isValid) {
+        if (firstInvalid) firstInvalid.focus();
+        return;
+      }
+
+      // ── Submit with loading state ──
       const submitBtn = bookingForm.querySelector('.form-submit') || bookingForm.querySelector('button[type="submit"]');
       const originalText = submitBtn.textContent;
 
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Отправка...';
-      submitBtn.style.opacity = '0.8';
+      submitBtn.textContent = 'Отправка…';
+      submitBtn.style.opacity = '0.7';
 
       try {
-        // 1. Безопасный сбор данных (ищем поля по типу или id, а не только по плейсхолдеру)
-        const nameInput = bookingForm.querySelector('input[type="text"]');
-        const phoneInput = bookingForm.querySelector('input[type="tel"]') || bookingForm.querySelectorAll('input[type="text"]')[1];
-        const serviceInput = document.getElementById('service') || bookingForm.querySelector('select');
-        const timeInput = bookingForm.querySelectorAll('select')[1]; // Второе выпадающее меню
-
-        // Проверяем, все ли поля нашлись в HTML
-        if (!nameInput || !phoneInput || !serviceInput || !timeInput) {
-          throw new Error("Не удалось найти одно из полей формы в HTML. Проверьте селекторы.");
-        }
-
         const bookingData = {
-          name: nameInput.value,
-          phone: phoneInput.value,
+          name: nameInput.value.trim(),
+          phone: contactInput.value.trim(),
           service: serviceInput.value,
           time: timeInput.value
         };
 
-        console.log("Отправляем данные на сервер:", bookingData); // Выводим в консоль для отладки
+        console.log('Отправляем данные на сервер:', bookingData);
 
-        // 2. Отправляем запрос
         const response = await fetch('https://tutor-back-9yjw.onrender.com/api/book', {
           method: 'POST',
           headers: {
@@ -136,40 +373,64 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (response.ok) {
-          submitBtn.textContent = 'Заявка отправлена!';
-          submitBtn.style.backgroundColor = '#10B981'; // Зеленый
-          submitBtn.style.color = '#fff';
+          submitBtn.textContent = '✓  Заявка отправлена!';
+          submitBtn.classList.add('form-submit--success');
           bookingForm.reset();
 
-          // Убираем активный класс с карточек (если они есть)
+          // Clear all validation states
+          [nameInput, contactInput, serviceInput, timeInput].forEach(f => {
+            if (f) clearFieldState(f);
+          });
+
+          // Deselect service cards
           document.querySelectorAll('.service-card').forEach(c => c.classList.remove('active'));
+
+          // Reset button after 4 seconds
+          setTimeout(() => {
+            submitBtn.textContent = originalText;
+            submitBtn.classList.remove('form-submit--success');
+            submitBtn.style.backgroundColor = '';
+            submitBtn.style.borderColor = '';
+            submitBtn.style.color = '';
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+          }, 4000);
         } else {
-          // Если Python вернул ошибку (например 422)
-          const errorData = await response.json();
-          console.error("Ответ сервера:", errorData);
-          throw new Error('Ошибка на стороне сервера');
+          let errorMsg = 'Ошибка на стороне сервера';
+          try {
+            const errorData = await response.json();
+            console.error('Ответ сервера:', errorData);
+            if (errorData.detail) errorMsg = errorData.detail;
+          } catch (_) { /* response wasn't JSON */ }
+          throw new Error(errorMsg);
         }
 
       } catch (error) {
-        // Если произошла любая ошибка (не нашли поле, нет интернета, выключен сервер)
-        console.error('КРИТИЧЕСКАЯ ОШИБКА:', error);
-        submitBtn.textContent = 'Ошибка отправки!';
-        submitBtn.style.backgroundColor = '#EF4444'; // Красный
+        console.error('Ошибка отправки:', error);
+        submitBtn.textContent = 'Ошибка. Попробуйте снова';
+        submitBtn.style.backgroundColor = '#EF4444';
+        submitBtn.style.borderColor = '#EF4444';
         submitBtn.style.color = '#fff';
-      } finally {
-        // Через 3 секунды возвращаем кнопку в норму
+
+        // Immediately re-enable so user can retry
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
+
+        // Reset style after 3 seconds
         setTimeout(() => {
           submitBtn.textContent = originalText;
           submitBtn.style.backgroundColor = '';
+          submitBtn.style.borderColor = '';
           submitBtn.style.color = '';
-          submitBtn.disabled = false;
-          submitBtn.style.opacity = '1';
         }, 3000);
       }
     });
   }
 
-  // --- Scroll Reveal ---
+
+  // ══════════════════════════════════
+  //  SCROLL REVEAL
+  // ══════════════════════════════════
   const revealElements = document.querySelectorAll('.reveal');
 
   if (revealElements.length > 0) {
@@ -191,7 +452,10 @@ document.addEventListener('DOMContentLoaded', () => {
     revealElements.forEach(el => revealObserver.observe(el));
   }
 
-  // --- Active Nav Highlighting ---
+
+  // ══════════════════════════════════
+  //  ACTIVE NAV HIGHLIGHTING
+  // ══════════════════════════════════
   const sections = document.querySelectorAll('section[id]');
   const navLinks = document.querySelectorAll('.nav a[href^="#"]');
 
