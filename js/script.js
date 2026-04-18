@@ -145,48 +145,73 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let isTelegramMode = false;
 
-    input.addEventListener('input', () => {
+    input.addEventListener('input', (e) => {
       const raw = input.value;
 
-      // Detect Telegram mode: starts with @
+      // 1. Режим Telegram (начинается с @)
       if (raw.startsWith('@')) {
         isTelegramMode = true;
-        return; // No masking for Telegram handles
+        return;
       }
 
-      // Phone masking mode
+      // 2. Режим телефона
       if (!isTelegramMode) {
         let digits = raw.replace(/\D/g, '');
 
+        // Если поле пустое — даем его очистить полностью
         if (digits.length === 0) {
           input.value = '';
           return;
         }
 
-        // Normalize: 8 → 7, or prepend 7
+        // Нормализация первой цифры
         if (digits.startsWith('8')) digits = '7' + digits.slice(1);
         if (!digits.startsWith('7')) digits = '7' + digits;
 
-        // Cap at 11 digits (Russian phone)
+        // Ограничение длины
         digits = digits.slice(0, 11);
 
         let formatted = '+' + digits[0];
-        if (digits.length >= 2) formatted += ' (' + digits.substring(1, Math.min(4, digits.length));
-        if (digits.length >= 4) formatted += ')';
-        if (digits.length >= 5) formatted += ' ' + digits.substring(4, Math.min(7, digits.length));
-        if (digits.length >= 8) formatted += '-' + digits.substring(7, Math.min(9, digits.length));
+
+        // Код города: скобка открывается при 2-й цифре
+        if (digits.length >= 2) {
+          formatted += ' (' + digits.substring(1, 4);
+        }
+
+        // КЛЮЧЕВОЙ МОМЕНТ: скобка закрывается только если цифр БОЛЬШЕ 4
+        // Это позволяет спокойно удалять цифру внутри скобок, не «залипая» на них
+        if (digits.length > 4) {
+          formatted += ') ' + digits.substring(4, 7);
+        } else if (digits.length === 4) {
+          // Если ровно 4 цифры (например, +7 (333), скобку не ставим принудительно при удалении
+          formatted += '';
+        }
+
+        if (digits.length >= 8) formatted += '-' + digits.substring(7, 9);
         if (digits.length >= 10) formatted += '-' + digits.substring(9, 11);
 
         input.value = formatted;
       }
     });
 
-    // Reset telegram mode when field is cleared and re-focused
+    // 3. Хак для Backspace
+    // Если пользователь удаляет символ и остается "+7 (", принудительно чистим всё
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace') {
+        const val = input.value;
+        if (val === '+7 (' || val.length <= 4) {
+          if (!isTelegramMode) {
+            input.value = '';
+            isTelegramMode = false;
+          }
+        }
+      }
+    });
+
+    // Сброс режимов при очистке
     input.addEventListener('focus', () => {
       if (input.value === '') isTelegramMode = false;
     });
-
-    // Also reset on full clear
     input.addEventListener('input', () => {
       if (input.value === '') isTelegramMode = false;
     });
