@@ -390,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         console.log('Отправляем данные на сервер:', bookingData);
 
-        const response = await fetch('https://tutor-back-9yjw.onrender.com/api/book', {
+        const response = await fetch('https://72.56.38.35:8000/api/book', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
